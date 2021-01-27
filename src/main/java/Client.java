@@ -1,3 +1,8 @@
+/*
+ * @created 27/{01}/2021 - 8:10 PM
+ * @project screen-sharing
+ * @author SAGAR DEVKOTA
+ */
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.io.BufferedReader;
@@ -12,7 +17,7 @@ import java.util.Scanner;
 public class Client {
     public static void main(String[] args) throws IOException, AWTException {
         Scanner scanner = new Scanner(System.in);
-        System.out.println("Enter your name");
+        System.out.println("Do you want to connect to server?");
         String clientName = scanner.nextLine();
         var client = new MyClient("localhost", 5999, clientName);
         System.out.println("Connection Established");
@@ -56,3 +61,4 @@ public class Client {
     }
 
 }
+

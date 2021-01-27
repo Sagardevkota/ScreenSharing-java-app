@@ -1,3 +1,9 @@
+/*
+ * @created 27/{01}/2021 - 8:09 PM
+ * @project screen-sharing
+ * @author Sagar Devkota
+ */
+
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
@@ -8,8 +14,8 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.*;
 import java.util.List;
+import java.util.*;
 
 
 public class Server {
@@ -26,8 +32,9 @@ public class Server {
         while (true) {
             var socket = serverSocket.accept();
             //create thread for each new client
-            var serverThread = new ServerThread(socket, UUID.randomUUID().toString());
+            var serverThread = new ServerThread(socket);
             serverThread.start();
+
         }
 
     }
@@ -37,22 +44,23 @@ public class Server {
         private final Socket socket;
         private final PrintWriter printWriter;
         private final BufferedReader bufferedReader;
-        private TestPane testPane = new TestPane();
+        private SingleScreen singleScreen;
         private String clientName;
 
 
-        ServerThread(Socket socket, String clientName) throws IOException {
+        ServerThread(Socket socket) throws IOException {
             this.socket = socket;
-            this.clientName = clientName;
             printWriter = new PrintWriter(socket.getOutputStream());
             bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            this.clientName = UUID.randomUUID().toString();
+            singleScreen = new SingleScreen(clientName);
         }
 
         @Override
         public void run() {
             try {
                 System.out.println(clientName + " Joined");
-                multipleScreen.addTestPane(testPane, clientName);
+                multipleScreen.addTestPane(singleScreen, clientName);
                 while (true)
                     readMessage();
 
@@ -70,10 +78,9 @@ public class Server {
             Thread.sleep(1000);
             var img = ImageIO.read(ImageIO.createImageInputStream(socket.getInputStream()));
             int clientIndex = multipleScreen.getClientIndex(clientName);
-            multipleScreen.getTestPaneList().get(clientIndex).setBufferedImage(img);
-            multipleScreen.getTestPaneList().get(clientIndex).repaint();
+            multipleScreen.getSingleScreenList().get(clientIndex).setBufferedImage(img);
+            multipleScreen.getSingleScreenList().get(clientIndex).repaint();
             System.out.println("Rendering Screen for " + clientName);
-
         }
 
 
@@ -85,27 +92,24 @@ public class Server {
 
     static class MultipleScreen {
         private final JFrame jFrame;
-        private JPanel cards;
-        private final List<TestPane> testPaneList = new ArrayList<>();
+        private final List<SingleScreen> singleScreenList = new ArrayList<>();
         private final Map<String, Integer> clientMap = new HashMap();
 
         MultipleScreen() {
             jFrame = new JFrame();
-            cards = new JPanel();
+            jFrame.getContentPane().setLayout(new BoxLayout(jFrame.getContentPane(), BoxLayout.Y_AXIS));
+
         }
 
-        public void addTestPane(TestPane testPane, String clientName) {
-            clientMap.put(clientName, testPaneList.size());
-            this.testPaneList.add(testPane);
-            for (TestPane testPane1 : testPaneList) {
-                cards.add(testPane1);
-                testPane.setSize(jFrame.getWidth() / testPaneList.size(),
-                        jFrame.getHeight() / testPaneList.size());
-
+        public void addTestPane(SingleScreen singleScreen, String clientName) {
+            clientMap.put(clientName, singleScreenList.size());
+            this.singleScreenList.add(singleScreen);
+            for (SingleScreen screen : singleScreenList) {
+                screen.setSize(jFrame.getWidth() / singleScreenList.size(), jFrame.getHeight() / singleScreenList.size());
+                jFrame.add(screen);
             }
-            cards.setLayout(new BoxLayout(cards, BoxLayout.PAGE_AXIS));
-            jFrame.add(cards);
-            jFrame.repaint();
+
+            jFrame.setVisible(true);
 
         }
 
@@ -113,12 +117,11 @@ public class Server {
             return clientMap.get(clientName);
         }
 
-        public List<TestPane> getTestPaneList() {
-            return testPaneList;
+        public List<SingleScreen> getSingleScreenList() {
+            return singleScreenList;
         }
 
         public void init() {
-            jFrame.add(cards);
             jFrame.setVisible(true);
             jFrame.setSize(1000, 1000);
 
@@ -129,20 +132,23 @@ public class Server {
 }
 
 
-class TestPane extends JPanel {
+class SingleScreen extends JPanel {
+
+    private final String clientName;
+
+    SingleScreen(String clientName) {
+        this.clientName = clientName;
+    }
 
     private BufferedImage bufferedImage;
 
-    public Dimension getPreferredSize() {
-        return new Dimension(200, 200);
-    }
 
     @Override
     protected void paintComponent(Graphics g) {
         if (bufferedImage != null)
             g.drawImage(bufferedImage, 0, 0, this);
         else
-            g.drawString("Nothing to display", 100, 100);
+            g.drawString("Nothing to display for client " + clientName, 100, 100);
     }
 
     public void setBufferedImage(BufferedImage bufferedImage) {
@@ -151,4 +157,5 @@ class TestPane extends JPanel {
 
 
 }
+
 
